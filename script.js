@@ -1,6 +1,7 @@
 const button = document.getElementById("wish");
 const thanks = document.getElementById("thanks");
 const counter = document.getElementById("counter");
+const total = document.getElementById("total");
 const subtitle = document.getElementById("subtitle");
 const title = document.getElementById("title");
 const badge = document.getElementById("badge");
@@ -132,11 +133,62 @@ function tick() {
   document.getElementById("seconds").textContent = pad(totalSeconds % 60);
 }
 
+function visitorId() {
+  const key = "birthdayVisitor";
+  try {
+    let id = localStorage.getItem(key);
+    if (!id) {
+      id = Array.from(crypto.getRandomValues(new Uint8Array(16)), function (b) {
+        return b.toString(16).padStart(2, "0");
+      }).join("");
+      localStorage.setItem(key, id);
+    }
+    return id;
+  } catch (error) {
+    return Math.random().toString(16).slice(2).padEnd(16, "0");
+  }
+}
+
+function showTotal(count) {
+  if (typeof count !== "number" || count < 1) {
+    return;
+  }
+  total.hidden = false;
+  total.textContent = count === 1 ? "1 person sent their wishes 💌" : count + " people sent their wishes 💌";
+}
+
+function refreshTotal() {
+  fetch("/api/count")
+    .then(function (response) {
+      return response.json();
+    })
+    .then(function (data) {
+      showTotal(data.count);
+    })
+    .catch(function () {});
+}
+
+function sendWish() {
+  fetch("/api/wish", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id: visitorId() })
+  })
+    .then(function (response) {
+      return response.json();
+    })
+    .then(function (data) {
+      showTotal(data.count);
+    })
+    .catch(function () {});
+}
+
 button.addEventListener("click", function () {
   const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   saveWished();
   showThanks(time);
   launchConfetti();
+  sendWish();
 });
 
 window.addEventListener("resize", resize);
@@ -147,3 +199,6 @@ timer = setInterval(tick, 1000);
 if (readWished()) {
   showThanks();
 }
+
+refreshTotal();
+setInterval(refreshTotal, 15000);
