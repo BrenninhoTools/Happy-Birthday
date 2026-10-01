@@ -309,6 +309,15 @@ button:disabled::after {
   display: none;
 }
 
+button.locked:disabled {
+  background: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.75);
+  text-shadow: none;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.22);
+  font-size: 1.1rem;
+  cursor: not-allowed;
+}
+
 #thanks {
   margin-top: 26px;
   font-size: 1.45rem;
@@ -321,8 +330,8 @@ button:disabled::after {
 }
 
 #total {
-  display: inline-block;
-  margin-top: 22px;
+  display: table;
+  margin: 22px auto 0;
   padding: 9px 20px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.12);

@@ -11,6 +11,9 @@ const files = {
   "/script.js": ["script.js", "text/javascript; charset=utf-8"]
 };
 
+const envUnlock = Date.parse(process.env.UNLOCK_AT || "");
+const unlockAt = Number.isNaN(envUnlock) ? Date.UTC(2026, 9, 2, 3, 0, 0) : envUnlock;
+
 let wishes = load();
 
 function load() {
@@ -54,6 +57,9 @@ function readBody(req, callback) {
 }
 
 function handleWish(req, res) {
+  if (Date.now() < unlockAt) {
+    return sendJson(res, 403, { error: "locked" });
+  }
   readBody(req, function (body) {
     const id = body && typeof body.id === "string" ? body.id : "";
     if (!/^[a-zA-Z0-9]{8,64}$/.test(id)) {
@@ -72,6 +78,10 @@ const server = http.createServer(function (req, res) {
 
   if (url === "/api/count" && req.method === "GET") {
     return sendJson(res, 200, { count: Object.keys(wishes).length });
+  }
+
+  if (url === "/api/config" && req.method === "GET") {
+    return sendJson(res, 200, { unlockAt: unlockAt });
   }
 
   if (url === "/api/wish" && req.method === "POST") {

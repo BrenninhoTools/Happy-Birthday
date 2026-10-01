@@ -8,9 +8,8 @@ const badge = document.getElementById("badge");
 const clock = document.getElementById("countdown");
 const canvas = document.getElementById("confetti");
 const ctx = canvas.getContext("2d");
-const storageKey = "birthdayWished";
-const birthdayMonth = 9;
-const birthdayDay = 2;
+const storageKey = "birthdayWishSent";
+const defaultUnlockAt = Date.UTC(2026, 9, 2, 3, 0, 0);
 
 const colors = ["#ffd93d", "#ff4d8d", "#3ddc97", "#4d96ff", "#ffffff", "#ff9ff3", "#c04dff", "#ff9f43"];
 const emojis = ["🎉", "🎂", "🥳", "🎈", "🎁", "✨", "🪩", "🍰"];
@@ -19,7 +18,9 @@ const ambientEnabled = !window.matchMedia("(prefers-reduced-motion: reduce)").ma
 let pieces = [];
 let running = false;
 let birthdayMode = false;
-let timer = null;
+let unlockAt = defaultUnlockAt;
+let sawCountdown = false;
+let wished = false;
 
 function resize() {
   canvas.width = window.innerWidth;
@@ -40,8 +41,19 @@ function saveWished() {
   } catch (error) {}
 }
 
+function setLocked(locked) {
+  if (wished) {
+    return;
+  }
+  button.disabled = locked;
+  button.classList.toggle("locked", locked);
+  button.textContent = locked ? "Unlocks when the countdown ends 🔒" : "Congratulations 🎉";
+}
+
 function showThanks(time) {
+  wished = true;
   button.disabled = true;
+  button.classList.remove("locked");
   button.textContent = "Wish sent ✅";
   subtitle.hidden = true;
   thanks.hidden = false;
@@ -172,16 +184,6 @@ function draw() {
   }
 }
 
-function nextBirthday(now) {
-  const year = now.getFullYear();
-  const dayEnd = new Date(year, birthdayMonth, birthdayDay + 1);
-  const target = new Date(year, birthdayMonth, birthdayDay);
-  if (now >= dayEnd) {
-    return new Date(year + 1, birthdayMonth, birthdayDay);
-  }
-  return target;
-}
-
 function pad(value) {
   return String(value).padStart(2, "0");
 }
@@ -193,21 +195,23 @@ function enterBirthdayMode(celebrate) {
   title.textContent = "It's my birthday!";
   subtitle.textContent = "Send me your wishes and join the party";
   document.body.classList.add("live");
+  setLocked(false);
   if (celebrate) {
     fireworks();
+    floatEmojis(10);
   }
 }
 
 function tick() {
-  const now = new Date();
-  const target = nextBirthday(now);
-  const diff = target - now;
+  const diff = unlockAt - Date.now();
   if (diff <= 0) {
     if (!birthdayMode) {
-      enterBirthdayMode(timer !== null);
+      enterBirthdayMode(sawCountdown);
     }
     return;
   }
+  sawCountdown = true;
+  setLocked(true);
   const totalSeconds = Math.floor(diff / 1000);
   document.getElementById("days").textContent = pad(Math.floor(totalSeconds / 86400));
   document.getElementById("hours").textContent = pad(Math.floor((totalSeconds % 86400) / 3600));
@@ -287,11 +291,26 @@ if (ambientEnabled) {
   ensureRunning();
 }
 tick();
-timer = setInterval(tick, 1000);
+setInterval(tick, 1000);
 
-if (readWished()) {
+if (birthdayMode && readWished()) {
   showThanks();
 }
+
+fetch("/api/config")
+  .then(function (response) {
+    return response.json();
+  })
+  .then(function (data) {
+    if (typeof data.unlockAt === "number" && data.unlockAt !== unlockAt) {
+      unlockAt = data.unlockAt;
+      tick();
+      if (birthdayMode && readWished()) {
+        showThanks();
+      }
+    }
+  })
+  .catch(function () {});
 
 refreshTotal();
 setInterval(refreshTotal, 15000);
