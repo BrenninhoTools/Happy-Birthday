@@ -2,12 +2,19 @@ const button = document.getElementById("wish");
 const thanks = document.getElementById("thanks");
 const counter = document.getElementById("counter");
 const subtitle = document.getElementById("subtitle");
+const title = document.getElementById("title");
+const badge = document.getElementById("badge");
+const clock = document.getElementById("countdown");
 const canvas = document.getElementById("confetti");
 const ctx = canvas.getContext("2d");
 const storageKey = "birthdayWished";
+const birthdayMonth = 9;
+const birthdayDay = 2;
 
 let pieces = [];
 let running = false;
+let birthdayMode = false;
+let timer = null;
 
 function resize() {
   canvas.width = window.innerWidth;
@@ -40,7 +47,7 @@ function showThanks(time) {
 }
 
 function launchConfetti() {
-  const colors = ["#ffd93d", "#ff6b6b", "#6bcB77", "#4d96ff", "#ffffff", "#ff9ff3"];
+  const colors = ["#ffd93d", "#ff6b6b", "#6bcb77", "#4d96ff", "#ffffff", "#ff9ff3"];
   for (let i = 0; i < 220; i++) {
     pieces.push({
       x: window.innerWidth / 2,
@@ -84,6 +91,47 @@ function draw() {
   }
 }
 
+function nextBirthday(now) {
+  const year = now.getFullYear();
+  const dayEnd = new Date(year, birthdayMonth, birthdayDay + 1);
+  const target = new Date(year, birthdayMonth, birthdayDay);
+  if (now >= dayEnd) {
+    return new Date(year + 1, birthdayMonth, birthdayDay);
+  }
+  return target;
+}
+
+function pad(value) {
+  return String(value).padStart(2, "0");
+}
+
+function enterBirthdayMode(celebrate) {
+  birthdayMode = true;
+  clock.hidden = true;
+  badge.textContent = "🎉 Today is the day";
+  title.textContent = "It's my birthday!";
+  if (celebrate) {
+    launchConfetti();
+  }
+}
+
+function tick() {
+  const now = new Date();
+  const target = nextBirthday(now);
+  const diff = target - now;
+  if (diff <= 0) {
+    if (!birthdayMode) {
+      enterBirthdayMode(timer !== null);
+    }
+    return;
+  }
+  const totalSeconds = Math.floor(diff / 1000);
+  document.getElementById("days").textContent = pad(Math.floor(totalSeconds / 86400));
+  document.getElementById("hours").textContent = pad(Math.floor((totalSeconds % 86400) / 3600));
+  document.getElementById("minutes").textContent = pad(Math.floor((totalSeconds % 3600) / 60));
+  document.getElementById("seconds").textContent = pad(totalSeconds % 60);
+}
+
 button.addEventListener("click", function () {
   const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   saveWished();
@@ -93,6 +141,8 @@ button.addEventListener("click", function () {
 
 window.addEventListener("resize", resize);
 resize();
+tick();
+timer = setInterval(tick, 1000);
 
 if (readWished()) {
   showThanks();

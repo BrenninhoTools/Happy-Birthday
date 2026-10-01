@@ -7,10 +7,26 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<div class="balloons" aria-hidden="true">
+<span class="balloon"></span>
+<span class="balloon"></span>
+<span class="balloon"></span>
+<span class="balloon"></span>
+<span class="balloon"></span>
+<span class="balloon"></span>
+<span class="balloon"></span>
+</div>
 <canvas id="confetti"></canvas>
-<main>
-<h1>It's my birthday!</h1>
+<main class="card">
+<p class="badge" id="badge">🎂 Birthday countdown</p>
+<h1 id="title">My birthday is almost here</h1>
 <p id="subtitle">Press the button to send your wishes</p>
+<section id="countdown" class="clock" aria-live="off">
+<div class="unit"><strong id="days">00</strong><span>Days</span></div>
+<div class="unit"><strong id="hours">00</strong><span>Hours</span></div>
+<div class="unit"><strong id="minutes">00</strong><span>Minutes</span></div>
+<div class="unit"><strong id="seconds">00</strong><span>Seconds</span></div>
+</section>
 <button id="wish">Congratulations 🎉</button>
 <p id="thanks" hidden>Thank you so much! You made my day 🎂</p>
 <p id="counter" hidden></p>
