@@ -3,7 +3,7 @@ const fs = require("fs");
 const path = require("path");
 
 const port = process.env.PORT || 3000;
-const dataFile = path.join(__dirname, "wishes.json");
+const dataFile = path.join(process.env.DATA_DIR || __dirname, "wishes.json");
 const files = {
   "/": ["index.html", "text/html; charset=utf-8"],
   "/index.html": ["index.html", "text/html; charset=utf-8"],

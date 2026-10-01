@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: happy_birthday
+    runtime: node
+    plan: free
+    buildCommand: echo ready
+    startCommand: npm start
