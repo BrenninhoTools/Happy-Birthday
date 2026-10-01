@@ -12,6 +12,10 @@ const storageKey = "birthdayWished";
 const birthdayMonth = 9;
 const birthdayDay = 2;
 
+const colors = ["#ffd93d", "#ff4d8d", "#3ddc97", "#4d96ff", "#ffffff", "#ff9ff3", "#c04dff", "#ff9f43"];
+const emojis = ["🎉", "🎂", "🥳", "🎈", "🎁", "✨", "🪩", "🍰"];
+const ambientEnabled = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
 let pieces = [];
 let running = false;
 let birthdayMode = false;
@@ -47,44 +51,120 @@ function showThanks(time) {
   }
 }
 
-function launchConfetti() {
-  const colors = ["#ffd93d", "#ff6b6b", "#6bcb77", "#4d96ff", "#ffffff", "#ff9ff3"];
-  for (let i = 0; i < 220; i++) {
-    pieces.push({
-      x: window.innerWidth / 2,
-      y: window.innerHeight / 2,
-      vx: (Math.random() - 0.5) * 18,
-      vy: Math.random() * -16 - 4,
-      size: Math.random() * 8 + 4,
-      color: colors[Math.floor(Math.random() * colors.length)],
-      rotation: Math.random() * Math.PI,
-      spin: (Math.random() - 0.5) * 0.3
-    });
-  }
+function ensureRunning() {
   if (!running) {
     running = true;
     requestAnimationFrame(draw);
   }
 }
 
+function randomColor() {
+  return colors[Math.floor(Math.random() * colors.length)];
+}
+
+function burst(x, y, count, angle, spread, power) {
+  for (let i = 0; i < count; i++) {
+    const direction = angle + (Math.random() - 0.5) * spread;
+    const speed = power * (0.35 + Math.random() * 0.65);
+    pieces.push({
+      x: x,
+      y: y,
+      vx: Math.cos(direction) * speed,
+      vy: Math.sin(direction) * speed,
+      size: Math.random() * 8 + 5,
+      color: randomColor(),
+      rotation: Math.random() * Math.PI,
+      spin: (Math.random() - 0.5) * 0.35,
+      round: Math.random() < 0.3,
+      ambient: false,
+      phase: 0
+    });
+  }
+  ensureRunning();
+}
+
+function spawnAmbient() {
+  pieces.push({
+    x: Math.random() * canvas.width,
+    y: -12,
+    vx: (Math.random() - 0.5) * 0.6,
+    vy: 1 + Math.random() * 1.8,
+    size: Math.random() * 6 + 4,
+    color: randomColor(),
+    rotation: Math.random() * Math.PI,
+    spin: (Math.random() - 0.5) * 0.12,
+    round: Math.random() < 0.35,
+    ambient: true,
+    phase: Math.random() * Math.PI * 2
+  });
+}
+
+function fireworks() {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  const rect = button.getBoundingClientRect();
+  burst(0, h, 130, -Math.PI / 3, 0.9, 30);
+  burst(w, h, 130, (-2 * Math.PI) / 3, 0.9, 30);
+  burst(rect.left + rect.width / 2, rect.top + rect.height / 2, 120, -Math.PI / 2, Math.PI * 2, 16);
+}
+
+function floatEmojis(count) {
+  const rect = button.getBoundingClientRect();
+  for (let i = 0; i < count; i++) {
+    const item = document.createElement("span");
+    item.className = "floater";
+    item.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+    item.style.left = rect.left + Math.random() * rect.width + "px";
+    item.style.top = rect.top + rect.height / 2 + "px";
+    item.style.setProperty("--dx", (Math.random() - 0.5) * 180 + "px");
+    item.style.setProperty("--rot", (Math.random() - 0.5) * 90 + "deg");
+    item.style.animationDelay = Math.random() * 0.6 + "s";
+    document.body.appendChild(item);
+    setTimeout(function () {
+      item.remove();
+    }, 3200);
+  }
+}
+
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  let ambientCount = 0;
   pieces.forEach(function (p) {
-    p.vy += 0.35;
-    p.x += p.vx;
-    p.y += p.vy;
+    if (p.ambient) {
+      p.phase += 0.03;
+      p.x += p.vx + Math.sin(p.phase) * 0.8;
+      p.y += p.vy;
+    } else {
+      p.vx *= 0.985;
+      p.vy += 0.35;
+      p.x += p.vx;
+      p.y += p.vy;
+    }
     p.rotation += p.spin;
     ctx.save();
     ctx.translate(p.x, p.y);
     ctx.rotate(p.rotation);
     ctx.fillStyle = p.color;
-    ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
+    if (p.round) {
+      ctx.beginPath();
+      ctx.arc(0, 0, p.size / 2, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
+    }
     ctx.restore();
   });
   pieces = pieces.filter(function (p) {
-    return p.y < canvas.height + 40;
+    const alive = p.y < canvas.height + 40;
+    if (alive && p.ambient) {
+      ambientCount++;
+    }
+    return alive;
   });
-  if (pieces.length) {
+  if (ambientEnabled && ambientCount < 70 && Math.random() < 0.3) {
+    spawnAmbient();
+  }
+  if (pieces.length || ambientEnabled) {
     requestAnimationFrame(draw);
   } else {
     running = false;
@@ -111,8 +191,10 @@ function enterBirthdayMode(celebrate) {
   clock.hidden = true;
   badge.textContent = "🎉 Today is the day";
   title.textContent = "It's my birthday!";
+  subtitle.textContent = "Send me your wishes and join the party";
+  document.body.classList.add("live");
   if (celebrate) {
-    launchConfetti();
+    fireworks();
   }
 }
 
@@ -187,12 +269,23 @@ button.addEventListener("click", function () {
   const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   saveWished();
   showThanks(time);
-  launchConfetti();
+  fireworks();
+  floatEmojis(14);
   sendWish();
+});
+
+document.addEventListener("click", function (event) {
+  if (event.target.closest("button")) {
+    return;
+  }
+  burst(event.clientX, event.clientY, 28, -Math.PI / 2, Math.PI * 1.3, 10);
 });
 
 window.addEventListener("resize", resize);
 resize();
+if (ambientEnabled) {
+  ensureRunning();
+}
 tick();
 timer = setInterval(tick, 1000);
 
